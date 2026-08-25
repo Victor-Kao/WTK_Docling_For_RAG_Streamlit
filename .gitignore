@@ -1,0 +1,85 @@
+# Byte-compiled / cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+.env/
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+.eggs/
+*.egg
+
+# Installer / packaging logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Test / coverage
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+.mypy_cache/
+.ruff_cache/
+.hypothesis/
+
+# IDE / editor
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+secrets.toml
+
+# Streamlit
+.streamlit/secrets.toml
+
+# Local data / uploads / outputs
+uploads/
+output/
+outputs/
+tmp/
+temp/
+*.zip
+!requirements.txt
+
+# Model / Hugging Face caches (local)
+.cache/
+huggingface/
+*.ckpt
+*.pt
+*.bin
+*.onnx
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Logs
+*.log
+logs/
+
+# Cursor / local tooling
+.cursor/
+agent-tools/
