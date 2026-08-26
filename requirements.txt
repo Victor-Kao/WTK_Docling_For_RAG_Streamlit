@@ -1,13 +1,19 @@
 # Documents Parsing Tool — Python dependencies
 # Install:  pip install -r requirements.txt
-# Or on Windows: double-click setup.bat
+# Or on Windows: double-click setup.bat / setup_no_venv.bat
+#
+# After install, setup scripts also force opencv-python-headless
+# to avoid Linux ImportError: libGL.so.1 (Docling / RapidOCR / OpenCV).
 
 streamlit==1.43.2
 docling>=2.0.0
 pdfplumber>=0.11.0
 liteparse>=2.0.0
 pymupdf>=1.24.0
+opencv-python-headless>=4.8.0
 
 # Optional system tools (not installed by pip):
 # - LibreOffice  — LiteParse for DOCX/PPTX/XLSX/CSV
 #   Windows: winget install --id TheDocumentFoundation.LibreOffice -e
+# - Linux libGL (only if you keep opencv-python instead of headless):
+#   sudo apt-get install -y libgl1 libglib2.0-0

@@ -169,12 +169,38 @@ Legacy Office (`.doc`, `.ppt`, `.xls`) and LiteParse Office conversion need Libr
 │   └── 2_Bulk_Parsing.py
 ├── .streamlit/config.toml           # Streamlit settings (file watcher off)
 ├── requirements.txt
+├── fix_opencv_headless.py           # Swap to opencv-python-headless (libGL fix)
+├── fix_opencv_headless.sh           # Linux helper for the same fix
 ├── setup.bat                        # Windows: try .venv, else pip --user
 ├── setup_no_venv.bat                # Windows: company PC (no venv)
 ├── run.bat                          # Windows: start Streamlit
 ├── README.md
 └── .gitignore
 ```
+
+## Linux / Docker — `libGL.so.1` (Docling)
+
+Docling pulls **OpenCV**. The GUI package (`opencv-python`) needs `libGL.so.1`, which many servers/containers do not have. Error looks like:
+
+`ImportError: libGL.so.1: cannot open shared object file: No such file or directory`
+
+**Preferred fix (no root):**
+
+```bash
+python -m pip uninstall -y opencv-python opencv-contrib-python
+python fix_opencv_headless.py
+# or:
+bash fix_opencv_headless.sh
+```
+
+**Alternative (system packages):**
+
+```bash
+sudo apt-get update
+sudo apt-get install -y libgl1 libglib2.0-0
+```
+
+Windows setup scripts run this OpenCV headless swap automatically after `pip install`.
 
 ## Notes
 
@@ -189,6 +215,7 @@ Legacy Office (`.doc`, `.ppt`, `.xls`) and LiteParse Office conversion need Libr
 |-------|-------------|
 | `streamlit` / wrong Python | Use `python -m streamlit run Home.py` or `run.bat` |
 | Cannot create `.venv` | Use `setup_no_venv.bat` or `pip install --user -r requirements.txt` |
+| `libGL.so.1` / Docling on Linux | Run `python fix_opencv_headless.py` or install `libgl1` (see section above) |
 | LiteParse fails on PPTX/XLSX/CSV | Install LibreOffice, or use Docling |
 | Slow first run | Normal — models downloading |
 | Out of memory on large PDFs | Use PyMuPDF / Hybrid, or split the file |

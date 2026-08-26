@@ -46,6 +46,14 @@ if errorlevel 1 (
 )
 
 echo.
+echo Fixing OpenCV for headless / Linux Docling (libGL.so.1)...
+python fix_opencv_headless.py
+if errorlevel 1 (
+  echo [WARN] OpenCV headless fix reported a problem.
+  echo On Linux you may need: sudo apt-get install -y libgl1 libglib2.0-0
+)
+
+echo.
 echo ============================================
 echo  Setup finished (no venv).
 echo  Next: double-click run.bat
