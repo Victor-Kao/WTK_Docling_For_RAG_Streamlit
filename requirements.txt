@@ -1,4 +1,13 @@
-streamlit>=1.28.0
+# Documents Parsing Tool — Python dependencies
+# Install:  pip install -r requirements.txt
+# Or on Windows: double-click setup.bat
+
+streamlit==1.43.2
 docling>=2.0.0
 pdfplumber>=0.11.0
 liteparse>=2.0.0
+pymupdf>=1.24.0
+
+# Optional system tools (not installed by pip):
+# - LibreOffice  — LiteParse for DOCX/PPTX/XLSX/CSV
+#   Windows: winget install --id TheDocumentFoundation.LibreOffice -e

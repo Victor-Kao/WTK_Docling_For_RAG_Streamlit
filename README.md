@@ -1,20 +1,106 @@
 # Documents Parsing Tool
 
-Streamlit app for converting documents to Markdown or JSON using multiple parsers:
+Streamlit app that converts documents to **Markdown** or **JSON** for RAG and other pipelines.
 
+**Parsers**
 - [Docling](https://github.com/docling-project/docling)
 - [PDFplumber](https://github.com/jsvine/pdfplumber)
 - [LiteParse](https://github.com/run-llama/liteparse)
+- [PyMuPDF](https://github.com/pymupdf/PyMuPDF)
+- **Hybrid** (PDF only) — fast parser by default; **Docling** only on pages that contain tables
 
-Supports single-file conversion and bulk folder parsing with a live status dashboard and selective ZIP download.
+Supports **single-file** parsing and **bulk** multi-file parsing with live status, result preview, and selective ZIP download.
+
+---
+
+## What to install first (before downloading / running)
+
+| Need | Required? | Why |
+|------|-----------|-----|
+| **Python 3.10–3.13** | Yes | Runs the app (`python`, `pip`) |
+| **Git** | Recommended | Clone this repository |
+| **Internet** | Yes (first run) | `pip install` + Docling/LiteParse may download models |
+| **LibreOffice** | Optional | Only if you want **LiteParse** on DOCX / PPTX / XLSX / CSV |
+| **Disk / RAM** | Recommended | Docling + models can use several GB |
+
+> Tip on Windows: prefer **Python 3.11/3.12** or **Anaconda**. Avoid odd standalone installs that conflict on `PATH` (e.g. a separate Python 3.14 with its own Streamlit).
+
+---
+
+## Quick start (Windows — easiest)
+
+1. Install [Python 3.12](https://www.python.org/downloads/) (check **Add Python to PATH**).
+2. Download or clone this repo, then open the project folder.
+3. Double-click **`setup.bat`** (creates `.venv` and installs packages).  
+   First install can take several minutes.
+4. Double-click **`run.bat`** to start the app.
+5. Open the URL shown in the terminal (usually `http://localhost:8501`).
+
+Optional (LiteParse for Office/CSV):
+
+```powershell
+winget install --id TheDocumentFoundation.LibreOffice -e
+```
+
+Then restart the terminal / app so `soffice` is on `PATH`.
+
+---
+
+## Clone and setup (any OS)
+
+```bash
+git clone https://github.com/Victor-Kao/WTK_Docling_For_RAG_Streamlit.git
+cd WTK_Docling_For_RAG_Streamlit
+```
+
+### Windows (manual)
+
+```bat
+python -m venv .venv
+.venv\Scripts\activate
+python -m pip install --upgrade pip
+pip install -r requirements.txt
+streamlit run Home.py
+```
+
+Or use the batch files:
+
+```bat
+setup.bat
+run.bat
+```
+
+### macOS / Linux
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+pip install -r requirements.txt
+streamlit run Home.py
+```
+
+### Anaconda (Windows)
+
+```powershell
+cd path\to\WTK_Docling_For_RAG_Streamlit
+conda activate base
+python -m pip install -r requirements.txt
+python -m streamlit run Home.py
+```
+
+Use `python -m streamlit` so you do not launch the wrong Python/Streamlit from `PATH`.
+
+---
 
 ## Features
 
-- **Home** — tool overview, usage guide, and citations
-- **Single Document Parsing** — upload one file, choose a parser, preview, and download
-- **Bulk Parsing** — upload a folder, set methods per file, track Done / In progress / Failed, preview results, then download a ZIP of selected outputs
-- Output formats: **Markdown** or **JSON**
-- Optional **OCR** for Docling and LiteParse
+- **Home** — overview, how-to, citations
+- **Single Document Parsing** — one file, choose parser, preview, download
+- **Bulk Parsing** — many files, per-file method, live dashboard, ZIP selection
+- Output: **Markdown** or **JSON**
+- OCR for Docling / LiteParse / Hybrid (Docling table pages)
+- **Auto Selection** (bulk): PDFs → Hybrid; other files → LiteParse if possible, else Docling
 
 ## Supported inputs
 
@@ -22,63 +108,51 @@ Supports single-file conversion and bulk folder parsing with a live status dashb
 |--------|---------|
 | **Docling** | PDF, PPT/PPTX, DOC/DOCX, XLS/XLSX, CSV, TXT, JSON, MD, HTML, images |
 | **PDFplumber** | PDF only |
-| **LiteParse** | PDF, DOCX/XLSX/PPTX, images |
+| **LiteParse** | PDF and images natively; DOCX/PPTX/XLSX/CSV only with LibreOffice |
+| **PyMuPDF** | PDF, common images |
+| **Hybrid** | PDF only — LiteParse/PyMuPDF by default; Docling on pages with tables |
 
-Legacy Office formats (`.doc`, `.ppt`, `.xls`) and some Office conversions may require LibreOffice.
+Legacy Office (`.doc`, `.ppt`, `.xls`) and LiteParse Office conversion need LibreOffice. Without it, use **Docling** for Office/CSV.
 
-## Requirements
+## Hybrid (PDF)
 
-- Python 3.10+
-- Windows / macOS / Linux
-
-## Setup
-
-```bash
-# Clone the repository
-git clone <your-repo-url>
-cd WTK_Docling_For_RAG_Streamlit
-
-# (Recommended) create a virtual environment
-python -m venv .venv
-
-# Windows
-.venv\Scripts\activate
-
-# macOS / Linux
-source .venv/bin/activate
-
-# Install dependencies
-pip install -r requirements.txt
-```
-
-## Run
-
-```bash
-streamlit run Home.py
-```
-
-Then open the URL shown in the terminal (usually `http://localhost:8501`).
+1. Detect pages that look like they contain tables (pdfplumber).
+2. **No tables** → LiteParse (PDF ≤ 5 MB) or PyMuPDF (PDF > 5 MB).
+3. **Has tables** → Docling on those pages only; other pages use PyMuPDF.
+4. Merge into one Markdown/JSON result.
 
 ## Project structure
 
 ```text
 .
-├── Home.py                          # Introduction / how-to / references
-├── docling_utils.py                 # Shared parsing helpers (Docling, PDFplumber, LiteParse)
+├── Home.py                          # Intro / how-to / references
+├── docling_utils.py                 # Shared parsers (all methods)
 ├── pages/
-│   ├── 1_Single_Document_Parsing.py # Single-file conversion
-│   └── 2_Bulk_Parsing.py            # Folder bulk conversion + ZIP export
+│   ├── 1_Single_Document_Parsing.py
+│   └── 2_Bulk_Parsing.py
+├── .streamlit/config.toml           # Streamlit settings (file watcher off)
 ├── requirements.txt
+├── setup.bat                        # Windows: create venv + install deps
+├── run.bat                          # Windows: start Streamlit
 ├── README.md
 └── .gitignore
 ```
 
-## Usage tips
+## Notes
 
-- The first Docling / LiteParse run may download models and take longer.
-- In bulk mode, pick a method per file (e.g. PDFplumber for some PDFs, Docling or LiteParse for images).
-- Use **Finish selection** before downloading the ZIP so only the files you keep are included.
-- **Clear cache** on Bulk Parsing clears parser caches, conversion results, and the uploaded folder.
+- `.streamlit/config.toml` sets `fileWatcherType = "none"` to avoid noisy `torch.classes` watcher errors (restart the app after code changes).
+- First Docling / LiteParse run may download models and take longer.
+- In bulk mode: set **Default method for Document**, override per row, use **Finish selection** before ZIP download.
+- **Clear cache** on Bulk Parsing clears parser caches, results, and the uploader.
+
+## Troubleshooting
+
+| Issue | What to try |
+|-------|-------------|
+| `streamlit` / wrong Python | Use `python -m streamlit run Home.py` or `run.bat` |
+| LiteParse fails on PPTX/XLSX/CSV | Install LibreOffice, or use Docling |
+| Slow first run | Normal — models downloading |
+| Out of memory on large PDFs | Use PyMuPDF / Hybrid, or split the file |
 
 ## References
 
@@ -98,7 +172,9 @@ Then open the URL shown in the terminal (usually `http://localhost:8501`).
 - Docling: https://arxiv.org/abs/2408.09869 · https://github.com/docling-project/docling
 - PDFplumber: https://github.com/jsvine/pdfplumber
 - LiteParse: https://github.com/run-llama/liteparse
+- PyMuPDF: https://github.com/pymupdf/PyMuPDF
 
 ## License
 
-Add your preferred license for this project. Upstream libraries keep their own licenses (Docling, PDFplumber, LiteParse).
+Add your preferred license for this project. Upstream libraries keep their own licenses
+(Docling, PDFplumber, LiteParse, PyMuPDF).

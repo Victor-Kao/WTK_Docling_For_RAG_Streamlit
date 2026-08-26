@@ -13,7 +13,7 @@ st.set_page_config(
 
 st.title("Documents Parsing Tool")
 st.caption(
-    "Parse documents into Markdown / JSON with Docling, PDFplumber, or LiteParse."
+    "Parse documents into Markdown / JSON with Docling, PDFplumber, LiteParse, PyMuPDF, or Hybrid."
 )
 
 st.markdown("---")
@@ -29,8 +29,11 @@ single-file or bulk folder workflows.
   understanding (PDF, Office, HTML, images, and more), with layout/table recovery and OCR.
 - **[PDFplumber](https://github.com/jsvine/pdfplumber)** — detailed PDF text and table
   extraction (PDF only; best on machine-generated PDFs).
-- **[LiteParse](https://github.com/run-llama/liteparse)** — fast local parsing for PDF,
-  Office (DOCX/XLSX/PPTX), and images.
+- **[LiteParse](https://github.com/run-llama/liteparse)** — fast local parsing for PDF
+  and images; Office/spreadsheets (DOCX/PPTX/XLSX/CSV) only if LibreOffice is installed.
+- **[PyMuPDF](https://github.com/pymupdf/PyMuPDF)** — high-performance PDF/image text extraction.
+- **Hybrid** — PDF only: fast default parser (LiteParse / PyMuPDF), **Docling** only on pages
+  that contain tables, then switch back.
 """
 )
 
@@ -64,6 +67,7 @@ with col3:
 
 st.info(
     "Legacy Office formats (`.doc`, `.ppt`, `.xls`) may require LibreOffice on the host machine. "
+    "LiteParse also needs LibreOffice for DOCX/PPTX/XLSX/CSV (use Docling without it). "
     "Prefer `.docx`, `.pptx`, and `.xlsx` when possible. "
     "JSON input is best as Docling Document JSON; other JSON is converted as plain text."
 )
@@ -73,15 +77,15 @@ st.markdown(
     """
 **Single file**
 1. Open **Single Document Parsing** in the sidebar.
-2. In **Settings**, choose a **Parsing method** (Docling, PDFplumber, or LiteParse).
+2. In **Settings**, choose a **Parsing method** (Docling, PDFplumber, LiteParse, PyMuPDF, or Hybrid).
 3. Upload one supported file (format limits depend on the method).
-4. Optionally enable **OCR** (Docling / LiteParse), choose **Markdown** or **JSON**, then click **Convert**.
+4. Optionally enable **OCR** (Docling / LiteParse / Hybrid), choose **Markdown** or **JSON**, then click **Convert**.
 5. Preview and download the result (use **Show / Hide result** as needed).
 
 **Bulk folder**
 1. Open **Bulk Parsing** in the sidebar.
-2. Upload a whole folder; set a **Default method for PDFs** if you like.
-3. In the file table, choose **Method** per file (Docling / PDFplumber / LiteParse where supported).
+2. Upload multiple files (select all files from a folder if needed); set a **Default method for Document** (or **Auto Selection**) if you like.
+3. In the file table, choose **Method** per file (Docling / PDFplumber / LiteParse / PyMuPDF / Hybrid where supported).
 4. Click **Start convert** and watch the live dashboard (Done / In progress / Pending / Failed).
 5. Preview one converted file at a time, uncheck any files to exclude from the ZIP, then download.
 
@@ -113,7 +117,8 @@ st.markdown(
     "Docling: [arXiv:2408.09869](https://arxiv.org/abs/2408.09869) · "
     "[GitHub](https://github.com/docling-project/docling)  \n"
     "PDFplumber: [jsvine/pdfplumber](https://github.com/jsvine/pdfplumber)  \n"
-    "LiteParse: [run-llama/liteparse](https://github.com/run-llama/liteparse)"
+    "LiteParse: [run-llama/liteparse](https://github.com/run-llama/liteparse)  \n"
+    "PyMuPDF: [pymupdf/PyMuPDF](https://github.com/pymupdf/PyMuPDF)"
 )
 
 st.markdown("---")

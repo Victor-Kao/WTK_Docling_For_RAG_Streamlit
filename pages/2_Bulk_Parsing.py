@@ -14,6 +14,8 @@ import pandas as pd
 import streamlit as st
 
 from docling_utils import (
+    DEFAULT_DOCUMENT_METHODS,
+    METHOD_AUTO,
     METHOD_DOCLING,
     PARSING_METHODS,
     SUPPORTED_EXTENSIONS,
@@ -82,7 +84,7 @@ def _reset_bulk() -> None:
 
 def _detect_files(
     uploaded_files: list,
-    default_pdf_method: str,
+    default_document_method: str,
     existing_jobs: list[dict] | None = None,
 ) -> list[dict]:
     previous = {j["file"]: j.get("method") for j in (existing_jobs or [])}
@@ -93,12 +95,17 @@ def _detect_files(
         if name in seen or not is_supported_file(name, method=METHOD_DOCLING):
             continue
         seen.add(name)
+        size_bytes = len(f.getvalue())
         prior = previous.get(name)
         method = coerce_method_for_file(
             name,
             prior
             if prior
-            else default_method_for_file(name, default_pdf_method=default_pdf_method),
+            else default_method_for_file(
+                name,
+                default_document_method=default_document_method,
+                size_bytes=size_bytes,
+            ),
         )
         jobs.append(
             {
@@ -106,7 +113,7 @@ def _detect_files(
                 "method": method,
                 "status": STATUS_PENDING,
                 "detail": "",
-                "size_kb": round(len(f.getvalue()) / 1024, 1),
+                "size_kb": round(size_bytes / 1024, 1),
             }
         )
     return sorted(jobs, key=lambda j: j["file"].lower())
@@ -260,28 +267,39 @@ _init_state()
 
 st.title("Bulk Parsing")
 st.markdown(
-    "Upload a whole folder, choose a parsing method **per file** "
-    "(Docling, PDFplumber, or LiteParse), "
+    "Upload multiple files (or all files from a folder), choose a parsing method **per file** "
+    "(Docling, PDFplumber, LiteParse, PyMuPDF, or Hybrid), "
     "watch live status, and download a ZIP of successful outputs."
 )
 
 with st.sidebar:
     st.header("Settings")
-    default_pdf_method = st.selectbox(
-        "Default method for PDFs",
-        options=PARSING_METHODS,
+    default_document_method = st.selectbox(
+        "Default method for Document",
+        options=DEFAULT_DOCUMENT_METHODS,
         index=0,
-        key="bulk_default_pdf_method",
-        help="Applied to newly detected PDFs. You can override each file below.",
+        key="bulk_default_document_method",
+        help=(
+            "Applied to newly detected files (you can override each row). "
+            "Auto Selection: PDFs use Hybrid; other files prefer LiteParse, else Docling. "
+            "Hybrid base uses PyMuPDF when a PDF is larger than 5 MB."
+        ),
     )
-    st.caption(
-        "Non-PDF defaults to **Docling**. Images/Office can also use **LiteParse**. "
-        "PDFplumber is PDF-only."
-    )
+    if default_document_method == METHOD_AUTO:
+        st.caption(
+            "**Auto Selection:** PDFs → **Hybrid** (LiteParse/PyMuPDF by default; "
+            "**Docling** only on pages with tables). Other types → LiteParse or Docling. "
+            "PDFs **> 5 MB** use PyMuPDF as the Hybrid base."
+        )
+    else:
+        st.caption(
+            f"New files default to **{default_document_method}** when that method "
+            "supports the type; otherwise the first allowed method is used."
+        )
     enable_ocr = st.checkbox(
-        "Enable OCR (Docling / LiteParse)",
+        "Enable OCR (Docling / LiteParse / Hybrid)",
         value=True,
-        help="Applies when a file uses Docling or LiteParse.",
+        help="Applies when a file uses Docling, LiteParse, or Hybrid table pages.",
         key="bulk_enable_ocr",
     )
     output_format = st.radio(
@@ -292,30 +310,30 @@ with st.sidebar:
     )
     st.markdown("---")
     st.caption(
-        "Folder upload keeps relative paths. "
+        "Multi-file upload keeps relative paths when the browser provides them. "
         "LiteParse: https://github.com/run-llama/liteparse"
     )
     if st.button(
         "Clear cache",
         use_container_width=True,
         disabled=st.session_state.bulk_running,
-        help="Clear parser caches, conversion results, and the uploaded folder.",
+        help="Clear parser caches, conversion results, and uploaded files.",
         key="bulk_clear_cache",
     ):
         _clear_cache()
         st.rerun()
 
 uploaded_files = st.file_uploader(
-    "Upload a folder",
+    "Upload files",
     type=SUPPORTED_EXTENSIONS,
-    accept_multiple_files="directory",
-    help="Select an entire folder. Supported documents will be listed for per-file method selection.",
+    accept_multiple_files=True,
+    help="Select one or more documents (Streamlit 1.43: multi-file upload; pick all files from a folder).",
     key=f"bulk_folder_uploader_{st.session_state.bulk_uploader_version}",
 )
 
 if not uploaded_files:
     _reset_bulk()
-    st.info("Choose a folder above to detect convertible files.")
+    st.info("Choose files above to detect convertible documents.")
     st.stop()
 
 detected_names = tuple(
@@ -334,7 +352,7 @@ if (not st.session_state.bulk_running) and (
 ):
     st.session_state.bulk_jobs = _detect_files(
         uploaded_files,
-        default_pdf_method=default_pdf_method,
+        default_document_method=default_document_method,
         existing_jobs=st.session_state.bulk_jobs,
     )
     st.session_state.bulk_results = {}
@@ -351,7 +369,7 @@ jobs = st.session_state.bulk_jobs or []
 
 st.subheader("Detected files")
 if not jobs:
-    st.warning("No supported files found in this folder.")
+    st.warning("No supported files found in this upload.")
     st.stop()
 
 if st.session_state.bulk_methods_df is None:
@@ -359,8 +377,8 @@ if st.session_state.bulk_methods_df is None:
 
 st.caption(
     f"Found **{len(jobs)}** supported file(s). "
-    "Set **Method** per row: PDFs → Docling / PDFplumber / LiteParse; "
-    "images & Office → Docling / LiteParse; other types → Docling."
+    "Set **Method** per row based on what each parser supports "
+    "(PDFplumber = PDF only; PyMuPDF = PDF/images; others vary)."
 )
 
 edited_methods = st.data_editor(
@@ -373,7 +391,7 @@ edited_methods = st.data_editor(
     column_config={
         "Method": st.column_config.SelectboxColumn(
             "Method",
-            help="PDFplumber is PDF-only. LiteParse supports PDF, DOCX/XLSX/PPTX, and images.",
+            help="Invalid choices are auto-corrected per file type.",
             options=PARSING_METHODS,
             required=True,
         ),
@@ -396,7 +414,7 @@ with col_b:
     if st.button("Reset", use_container_width=True, disabled=st.session_state.bulk_running):
         st.session_state.bulk_jobs = _detect_files(
             uploaded_files,
-            default_pdf_method=default_pdf_method,
+            default_document_method=default_document_method,
             existing_jobs=None,
         )
         st.session_state.bulk_results = {}

@@ -1,0 +1,6 @@
+[server]
+# Avoid Streamlit file-watcher crashing on torch.classes (noisy RuntimeError in logs).
+fileWatcherType = "none"
+
+[browser]
+gatherUsageStats = false

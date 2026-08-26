@@ -9,8 +9,10 @@ import json
 import streamlit as st
 
 from docling_utils import (
+    METHOD_HYBRID,
     METHOD_LITEPARSE,
     METHOD_PDFPLUMBER,
+    METHOD_PYMUPDF,
     allowed_extensions_for_method,
     file_extension,
     parse_upload,
@@ -29,8 +31,10 @@ st.title("Single Document Parsing")
 st.markdown(
     "Upload a supported file and convert it with "
     "[Docling](https://github.com/docling-project/docling), "
-    "[PDFplumber](https://github.com/jsvine/pdfplumber), or "
-    "[LiteParse](https://github.com/run-llama/liteparse)."
+    "[PDFplumber](https://github.com/jsvine/pdfplumber), "
+    "[LiteParse](https://github.com/run-llama/liteparse), "
+    "[PyMuPDF](https://github.com/pymupdf/PyMuPDF), or "
+    "**Hybrid** (PDF: fast parser + Docling on table pages)."
 )
 
 if "conversion" not in st.session_state:
@@ -50,12 +54,17 @@ uploaded = st.file_uploader(
     "Choose a file",
     type=allowed_types,
     help=(
-        "PDF only when PDFplumber is selected."
-        if method == METHOD_PDFPLUMBER
+        "PDF only when PDFplumber or Hybrid is selected."
+        if method in {METHOD_PDFPLUMBER, METHOD_HYBRID}
         else (
-            "PDF, DOCX/XLSX/PPTX, and images when LiteParse is selected."
-            if method == METHOD_LITEPARSE
-            else "Select one document to convert."
+            "PDF and images when PyMuPDF is selected."
+            if method == METHOD_PYMUPDF
+            else (
+                "PDF and images when LiteParse is selected "
+                "(Office/CSV need LibreOffice)."
+                if method == METHOD_LITEPARSE
+                else "Select one document to convert."
+            )
         )
     ),
     key=f"single_uploader_{method}",
