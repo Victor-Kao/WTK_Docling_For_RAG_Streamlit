@@ -29,12 +29,38 @@ Supports **single-file** parsing and **bulk** multi-file parsing with live statu
 
 ## Quick start (Windows — easiest)
 
-1. Install [Python 3.12](https://www.python.org/downloads/) (check **Add Python to PATH**).
+1. Install [Python 3.12](https://www.python.org/downloads/) (check **Add Python to PATH**), **or** use company **Anaconda**.
 2. Download or clone this repo, then open the project folder.
-3. Double-click **`setup.bat`** (creates `.venv` and installs packages).  
+3. Double-click **`setup.bat`** (creates `.venv` if allowed; otherwise installs with `pip --user`).  
    First install can take several minutes.
 4. Double-click **`run.bat`** to start the app.
 5. Open the URL shown in the terminal (usually `http://localhost:8501`).
+
+### Company PC — cannot create `.venv`
+
+Many corporate machines block `python -m venv`. You do **not** need a venv.
+
+**Option A — batch file**
+
+1. Double-click **`setup_no_venv.bat`** (installs into your user Python via `pip --user`)
+2. Double-click **`run.bat`**
+
+**Option B — Anaconda Prompt** (often already approved by IT)
+
+```powershell
+cd path\to\WTK_Docling_For_RAG_Streamlit
+python -m pip install --user -r requirements.txt
+python -m streamlit run Home.py
+```
+
+**Option C — manual (no venv)**
+
+```bat
+python -m pip install --user -r requirements.txt
+python -m streamlit run Home.py
+```
+
+If `pip` itself is blocked, ask IT for a Python/Anaconda environment where you can install packages, or request `streamlit`, `docling`, `pdfplumber`, `liteparse`, and `pymupdf`.
 
 Optional (LiteParse for Office/CSV):
 
@@ -55,6 +81,8 @@ cd WTK_Docling_For_RAG_Streamlit
 
 ### Windows (manual)
 
+With venv (if allowed):
+
 ```bat
 python -m venv .venv
 .venv\Scripts\activate
@@ -63,10 +91,19 @@ pip install -r requirements.txt
 streamlit run Home.py
 ```
 
+Without venv (company PC):
+
+```bat
+python -m pip install --user -r requirements.txt
+python -m streamlit run Home.py
+```
+
 Or use the batch files:
 
 ```bat
 setup.bat
+rem if venv fails, use:
+setup_no_venv.bat
 run.bat
 ```
 
@@ -132,7 +169,8 @@ Legacy Office (`.doc`, `.ppt`, `.xls`) and LiteParse Office conversion need Libr
 │   └── 2_Bulk_Parsing.py
 ├── .streamlit/config.toml           # Streamlit settings (file watcher off)
 ├── requirements.txt
-├── setup.bat                        # Windows: create venv + install deps
+├── setup.bat                        # Windows: try .venv, else pip --user
+├── setup_no_venv.bat                # Windows: company PC (no venv)
 ├── run.bat                          # Windows: start Streamlit
 ├── README.md
 └── .gitignore
@@ -150,9 +188,11 @@ Legacy Office (`.doc`, `.ppt`, `.xls`) and LiteParse Office conversion need Libr
 | Issue | What to try |
 |-------|-------------|
 | `streamlit` / wrong Python | Use `python -m streamlit run Home.py` or `run.bat` |
+| Cannot create `.venv` | Use `setup_no_venv.bat` or `pip install --user -r requirements.txt` |
 | LiteParse fails on PPTX/XLSX/CSV | Install LibreOffice, or use Docling |
 | Slow first run | Normal — models downloading |
 | Out of memory on large PDFs | Use PyMuPDF / Hybrid, or split the file |
+| `pip` / install blocked by IT | Ask for Anaconda or package allow-list (see requirements.txt) |
 
 ## References
 

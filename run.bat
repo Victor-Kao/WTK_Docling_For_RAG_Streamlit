@@ -14,13 +14,13 @@ if exist ".venv\Scripts\python.exe" (
   where python >nul 2>&1
   if errorlevel 1 (
     echo [ERROR] No .venv and no Python on PATH.
-    echo Run setup.bat first.
+    echo Run setup.bat or setup_no_venv.bat first.
     pause
     exit /b 1
   )
   set "PY=python"
-  echo [WARN] .venv not found — using system Python.
-  echo Prefer running setup.bat once before run.bat.
+  echo Using system / Anaconda Python (no .venv).
+  echo If imports fail, run setup_no_venv.bat once.
 )
 
 echo.
@@ -34,7 +34,7 @@ set "EXITCODE=%ERRORLEVEL%"
 if not "%EXITCODE%"=="0" (
   echo.
   echo [ERROR] Streamlit exited with code %EXITCODE%.
-  echo If packages are missing, run setup.bat again.
+  echo If packages are missing, run setup.bat or setup_no_venv.bat.
   pause
 )
 endlocal
