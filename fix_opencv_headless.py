@@ -15,16 +15,18 @@ def main() -> int:
     )
     print("Installing opencv-python-headless...")
     result = subprocess.run(
-        [py, "-m", "pip", "install", "--no-cache-dir", "opencv-python-headless>=4.8.0"],
+        [py, "-m", "pip", "install", "--no-cache-dir", "--force-reinstall", "opencv-python-headless>=4.8.0,<5"],
         check=False,
     )
     if result.returncode != 0:
         print("Failed to install opencv-python-headless", file=sys.stderr)
         return result.returncode
     try:
-        import cv2  # noqa: F401
+        import cv2
 
-        print("OpenCV headless OK:", getattr(cv2, "__file__", "cv2"))
+        if not hasattr(cv2, "imread"):
+            raise RuntimeError("cv2 is a broken namespace package; reinstall failed")
+        print("OpenCV headless OK:", cv2.__version__)
     except Exception as exc:  # pragma: no cover
         print("Warning: cv2 import still failed:", exc, file=sys.stderr)
         print(

@@ -13,7 +13,7 @@ import pdfplumber
 import pymupdf
 import streamlit as st
 from docling.datamodel.base_models import DocumentStream, InputFormat
-from docling.datamodel.pipeline_options import PdfPipelineOptions
+from docling.datamodel.pipeline_options import PdfPipelineOptions, RapidOcrOptions
 from docling.document_converter import (
     DocumentConverter,
     ImageFormatOption,
@@ -21,7 +21,7 @@ from docling.document_converter import (
 )
 from liteparse import LiteParse
 
-from llm_api_utils import LlmApiConfig, parse_with_llm_api
+from llm_api_utils import LlmApiConfig, parse_with_llm_api, render_llm_api_settings
 
 METHOD_DOCLING = "Docling"
 METHOD_PDFPLUMBER = "PDFplumber"
@@ -128,14 +128,104 @@ PYMUPDF_EXTENSIONS_SET = set(PYMUPDF_EXTENSIONS)
 HYBRID_EXTENSIONS = ["pdf"]
 HYBRID_EXTENSIONS_SET = set(HYBRID_EXTENSIONS)
 
+LOCAL_MODEL_DIR = Path(__file__).resolve().parent / "model"
+LOCAL_OCR_FILES = {
+    "det": "PP-OCRv6_det_small.onnx",
+    "rec": "PP-OCRv6_rec_small.onnx",
+    "cls": "ch_ppocr_mobile_v2.0_cls_mobile.onnx",
+    "keys": "ppocrv6_dict.txt",
+}
+
+
+def local_ocr_models_ready() -> bool:
+    return all((LOCAL_MODEL_DIR / name).is_file() for name in LOCAL_OCR_FILES.values())
+
+
+def build_local_rapid_ocr_options() -> RapidOcrOptions:
+    return RapidOcrOptions(
+        backend="onnxruntime",
+        det_model_path=str(LOCAL_MODEL_DIR / LOCAL_OCR_FILES["det"]),
+        rec_model_path=str(LOCAL_MODEL_DIR / LOCAL_OCR_FILES["rec"]),
+        cls_model_path=str(LOCAL_MODEL_DIR / LOCAL_OCR_FILES["cls"]),
+        rec_keys_path=str(LOCAL_MODEL_DIR / LOCAL_OCR_FILES["keys"]),
+    )
+
+
+def docling_should_ocr(
+    enable_ocr: bool,
+    no_local_model_downloads: bool,
+    use_local_ocr_models: bool,
+) -> bool:
+    if not enable_ocr:
+        return False
+    if use_local_ocr_models and local_ocr_models_ready():
+        return True
+    return enable_ocr and not no_local_model_downloads
+
+
+def render_no_model_download_option(*, key_prefix: str = "") -> bool:
+    """Sidebar toggle: skip Docling RapidOCR (Hugging Face PP-OCR downloads)."""
+    return st.checkbox(
+        "Restricted PC (no Hugging Face downloads for Docling OCR)",
+        value=False,
+        key=f"{key_prefix}no_local_model_downloads",
+        help=(
+            "Turns off Docling OCR only (RapidOCR / PP-OCR weights from Hugging Face). "
+            "LiteParse OCR still follows Enable OCR. Hybrid table pages still use Docling "
+            "without OCR."
+        ),
+    )
+
+
+def render_use_local_ocr_models_option(*, key_prefix: str = "") -> bool:
+    """Sidebar toggle: Docling OCR uses ./model/ ONNX files (no HF download for OCR)."""
+    ready = local_ocr_models_ready()
+    use_local = st.checkbox(
+        "Use local OCR models (model/ folder)",
+        value=False,
+        key=f"{key_prefix}use_local_ocr_models",
+        help=(
+            "Docling RapidOCR reads PP-OCRv6 ONNX files from the project model/ folder. "
+            "Run copy_local_ocr_models.py once to populate it."
+        ),
+    )
+    if use_local and not ready:
+        st.warning(
+            "Local OCR files missing in `model/`. Run: "
+            "`python copy_local_ocr_models.py`"
+        )
+    elif use_local and ready:
+        st.caption("Local OCR ready: PP-OCRv6 det/rec + cls in `model/`.")
+    return use_local
+
 
 @st.cache_resource(show_spinner=False)
-def get_converter(enable_ocr: bool) -> DocumentConverter:
+def get_converter(
+    enable_ocr: bool,
+    no_local_model_downloads: bool = False,
+    use_local_ocr_models: bool = False,
+) -> DocumentConverter:
     """Build a cached DocumentConverter with optional OCR for PDFs/images."""
-    pdf_options = PdfPipelineOptions(
-        do_ocr=enable_ocr,
-        do_table_structure=True,
+    use_ocr = docling_should_ocr(
+        enable_ocr,
+        no_local_model_downloads,
+        use_local_ocr_models,
     )
+    ocr_options: RapidOcrOptions | None = None
+    if use_ocr and use_local_ocr_models and local_ocr_models_ready():
+        ocr_options = build_local_rapid_ocr_options()
+
+    pdf_options = PdfPipelineOptions(
+        do_ocr=use_ocr,
+        do_table_structure=True,
+        do_code_enrichment=False,
+        do_formula_enrichment=False,
+        do_chart_extraction=False,
+        do_picture_classification=False,
+        do_picture_description=False,
+    )
+    if ocr_options is not None:
+        pdf_options.ocr_options = ocr_options
     return DocumentConverter(
         format_options={
             InputFormat.PDF: PdfFormatOption(pipeline_options=pdf_options),
@@ -396,10 +486,18 @@ def _docling_single_page_pdf(
     page_number: int,
     *,
     enable_ocr: bool,
+    no_local_model_downloads: bool = False,
+    use_local_ocr_models: bool = False,
 ) -> str:
     """Convert one PDF page with Docling and return markdown (without wrapping title)."""
     page_name = f"{Path(source_name).stem}_p{page_number}.pdf"
-    result = _convert_with_docling(page_name, page_raw, enable_ocr)
+    result = _convert_with_docling(
+        page_name,
+        page_raw,
+        enable_ocr,
+        no_local_model_downloads=no_local_model_downloads,
+        use_local_ocr_models=use_local_ocr_models,
+    )
     return (result.document.export_to_markdown() or "").strip()
 
 
@@ -409,6 +507,8 @@ def _parse_with_hybrid(
     *,
     enable_ocr: bool,
     output_format: str,
+    no_local_model_downloads: bool = False,
+    use_local_ocr_models: bool = False,
 ) -> tuple[str, str, str]:
     """
     Hybrid PDF parsing:
@@ -430,6 +530,8 @@ def _parse_with_hybrid(
             method=base_method,
             enable_ocr=enable_ocr,
             output_format=output_format,
+            no_local_model_downloads=no_local_model_downloads,
+            use_local_ocr_models=use_local_ocr_models,
         )
         if output_format == "JSON":
             try:
@@ -468,6 +570,8 @@ def _parse_with_hybrid(
                         page_raw,
                         page_number,
                         enable_ocr=enable_ocr,
+                        no_local_model_downloads=no_local_model_downloads,
+                        use_local_ocr_models=use_local_ocr_models,
                     )
                     engine = "docling"
                 except Exception as exc:
@@ -576,8 +680,19 @@ def _parse_with_liteparse(
     return content, f"{stem}.json", "application/json"
 
 
-def _convert_with_docling(name: str, raw: bytes, enable_ocr: bool):
-    converter = get_converter(enable_ocr)
+def _convert_with_docling(
+    name: str,
+    raw: bytes,
+    enable_ocr: bool,
+    *,
+    no_local_model_downloads: bool = False,
+    use_local_ocr_models: bool = False,
+):
+    converter = get_converter(
+        enable_ocr,
+        no_local_model_downloads=no_local_model_downloads,
+        use_local_ocr_models=use_local_ocr_models,
+    )
     ext = file_extension(name)
 
     if ext == "json":
@@ -620,6 +735,8 @@ def parse_bytes(
     enable_ocr: bool,
     output_format: str,
     llm_config: LlmApiConfig | None = None,
+    no_local_model_downloads: bool = False,
+    use_local_ocr_models: bool = False,
 ) -> tuple[str, str, str]:
     """Parse file bytes with the selected method and return export triple."""
     if method == METHOD_PDFPLUMBER:
@@ -639,6 +756,8 @@ def parse_bytes(
             raw,
             enable_ocr=enable_ocr,
             output_format=output_format,
+            no_local_model_downloads=no_local_model_downloads,
+            use_local_ocr_models=use_local_ocr_models,
         )
     if method == METHOD_LLM_API:
         if llm_config is None:
@@ -651,7 +770,13 @@ def parse_bytes(
         )
     if method != METHOD_DOCLING:
         raise ValueError(f"Unknown parsing method: {method}")
-    result = _convert_with_docling(name, raw, enable_ocr)
+    result = _convert_with_docling(
+        name,
+        raw,
+        enable_ocr,
+        no_local_model_downloads=no_local_model_downloads,
+        use_local_ocr_models=use_local_ocr_models,
+    )
     return export_docling_result(result, output_format)
 
 
@@ -662,6 +787,8 @@ def parse_upload(
     enable_ocr: bool,
     output_format: str,
     llm_config: LlmApiConfig | None = None,
+    no_local_model_downloads: bool = False,
+    use_local_ocr_models: bool = False,
 ) -> tuple[str, str, str]:
     """Parse an uploaded Streamlit file with the selected method."""
     return parse_bytes(
@@ -671,6 +798,8 @@ def parse_upload(
         enable_ocr=enable_ocr,
         output_format=output_format,
         llm_config=llm_config,
+        no_local_model_downloads=no_local_model_downloads,
+        use_local_ocr_models=use_local_ocr_models,
     )
 
 
@@ -696,6 +825,8 @@ def output_name_for_source(source_name: str, output_format: str) -> str:
 def render_parse_settings(*, key_prefix: str = "") -> dict[str, Any]:
     """Render shared sidebar parse settings; return selected options."""
     st.header("Settings")
+    no_local_model_downloads = render_no_model_download_option(key_prefix=key_prefix)
+    use_local_ocr_models = render_use_local_ocr_models_option(key_prefix=key_prefix)
     method = st.selectbox(
         "Parsing method",
         options=PARSING_METHODS,
@@ -705,22 +836,32 @@ def render_parse_settings(*, key_prefix: str = "") -> dict[str, Any]:
             "Docling / LiteParse: multi-format. "
             "PDFplumber / PyMuPDF: PDF-focused. "
             "Hybrid (PDF): default parser, Docling only on pages with tables. "
-            "LLM API: cloud-only (Gemini or company OpenAI-compatible gateway)."
+            "LLM API: cloud-only (user-defined API base URL and model)."
         ),
     )
     llm_config: LlmApiConfig | None = None
     if method == METHOD_LLM_API:
-        from llm_api_utils import render_llm_api_settings
-
         llm_config = render_llm_api_settings(key_prefix=key_prefix)
     ocr_methods = {METHOD_DOCLING, METHOD_LITEPARSE, METHOD_HYBRID}
     enable_ocr = st.checkbox(
         "Enable OCR",
         value=True,
         disabled=method not in ocr_methods,
-        help="Applies to Docling, LiteParse, and Hybrid (Docling table pages).",
+        help=(
+            "LiteParse and Hybrid (LiteParse base): uses LiteParse OCR when enabled. "
+            "Docling: RapidOCR when enabled. Use local model/ folder to avoid HF OCR downloads."
+        ),
         key=f"{key_prefix}enable_ocr",
     )
+    if (
+        no_local_model_downloads
+        and not (use_local_ocr_models and local_ocr_models_ready())
+        and method in {METHOD_DOCLING, METHOD_HYBRID}
+    ):
+        st.caption(
+            "Restricted PC: **Docling OCR** is off (or enable **Use local OCR models**). "
+            "LiteParse OCR still follows **Enable OCR**."
+        )
     output_format = st.radio(
         "Output format",
         options=["Markdown", "JSON"],
@@ -754,8 +895,9 @@ def render_parse_settings(*, key_prefix: str = "") -> dict[str, Any]:
         )
     elif method == METHOD_LLM_API:
         st.caption(
-            "**LLM API:** sends the file to your cloud API (no Hugging Face / no local models). "
-            "Best for company Gemini or OpenAI-compatible gateways."
+            "LLM API: any company HTTP endpoint (LlamaIndex). "
+            "Image files and PDF pages (vision mode) need a multimodal model. "
+            "You set base URL, model, and API key — no local models."
         )
     else:
         st.caption(
@@ -765,6 +907,8 @@ def render_parse_settings(*, key_prefix: str = "") -> dict[str, Any]:
     result: dict[str, Any] = {
         "method": method,
         "enable_ocr": enable_ocr,
+        "no_local_model_downloads": no_local_model_downloads,
+        "use_local_ocr_models": use_local_ocr_models,
         "output_format": output_format,
     }
     if llm_config is not None:

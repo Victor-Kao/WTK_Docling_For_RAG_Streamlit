@@ -36,7 +36,7 @@ st.markdown(
     "[LiteParse](https://github.com/run-llama/liteparse), "
     "[PyMuPDF](https://github.com/pymupdf/PyMuPDF), "
     "**Hybrid** (PDF: fast parser + Docling on table pages), or "
-    "**LLM API** (company Gemini / OpenAI-compatible gateway — no local models)."
+    "**LLM API** (your company gateway — set base URL, model, and API key yourself)."
 )
 
 if "conversion" not in st.session_state:
@@ -49,6 +49,8 @@ with st.sidebar:
 
 method = settings["method"]
 enable_ocr = settings["enable_ocr"]
+no_local_model_downloads = settings.get("no_local_model_downloads", False)
+use_local_ocr_models = settings.get("use_local_ocr_models", False)
 output_format = settings["output_format"]
 llm_config = settings.get("llm_config")
 allowed_types = allowed_extensions_for_method(method)
@@ -122,6 +124,8 @@ if uploaded is not None:
                     enable_ocr=enable_ocr,
                     output_format=output_format,
                     llm_config=llm_config,
+                    no_local_model_downloads=no_local_model_downloads,
+                    use_local_ocr_models=use_local_ocr_models,
                 )
                 st.session_state.conversion = {
                     "source_name": uploaded.name,

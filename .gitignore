@@ -65,13 +65,14 @@ temp/
 *.zip
 !requirements.txt
 
-# Model / Hugging Face caches (local)
+# Model weights — ONNX in model/ is tracked for offline Docling OCR
+# (PP-OCRv6_det_small.onnx, PP-OCRv6_rec_small.onnx, etc.)
 .cache/
 huggingface/
 *.ckpt
 *.pt
 *.bin
-*.onnx
+# *.onnx  — commented out so model/*.onnx can be committed (~30 MB total)
 
 # Jupyter
 .ipynb_checkpoints/

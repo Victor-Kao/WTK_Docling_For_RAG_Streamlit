@@ -35,8 +35,8 @@ single-file or bulk folder workflows.
 - **[PyMuPDF](https://github.com/pymupdf/PyMuPDF)** — high-performance PDF/image text extraction.
 - **Hybrid** — PDF only: fast default parser (LiteParse / PyMuPDF), **Docling** only on pages
   that contain tables, then switch back.
-- **LLM API** — cloud-only parsing via your company **Gemini** or **OpenAI-compatible** API.
-  No Hugging Face downloads and no local LLM models.
+- **LLM API** — cloud-only via **your** API base URL + model name (LlamaIndex; no local models).
+  No Hugging Face downloads.
 """
 )
 

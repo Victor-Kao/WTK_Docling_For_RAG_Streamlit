@@ -23,8 +23,11 @@ from docling_utils import (
     coerce_method_for_file,
     default_method_for_file,
     is_supported_file,
+    local_ocr_models_ready,
     output_name_for_source,
     parse_bytes,
+    render_no_model_download_option,
+    render_use_local_ocr_models_option,
 )
 from llm_api_utils import render_llm_api_settings
 
@@ -298,12 +301,22 @@ with st.sidebar:
             f"New files default to **{default_document_method}** when that method "
             "supports the type; otherwise the first allowed method is used."
         )
+    no_local_model_downloads = render_no_model_download_option(key_prefix="bulk_")
+    use_local_ocr_models = render_use_local_ocr_models_option(key_prefix="bulk_")
     enable_ocr = st.checkbox(
         "Enable OCR (Docling / LiteParse / Hybrid)",
         value=True,
-        help="Applies when a file uses Docling, LiteParse, or Hybrid table pages.",
+        help=(
+            "LiteParse and Hybrid LiteParse base use this setting. "
+            "Docling OCR is skipped when Restricted PC is on."
+        ),
         key="bulk_enable_ocr",
     )
+    if no_local_model_downloads and not (use_local_ocr_models and local_ocr_models_ready()):
+        st.caption(
+            "Restricted PC: Docling OCR off unless **Use local OCR models** is on. "
+            "LiteParse OCR uses **Enable OCR**."
+        )
     output_format = st.radio(
         "Output format",
         options=["Markdown", "JSON"],
@@ -493,6 +506,8 @@ if start and not st.session_state.bulk_running:
                 enable_ocr=enable_ocr,
                 output_format=output_format,
                 llm_config=bulk_llm_config if file_method == METHOD_LLM_API else None,
+                no_local_model_downloads=no_local_model_downloads,
+                use_local_ocr_models=use_local_ocr_models,
             )
             out_name = output_name_for_source(source_name, output_format)
             existing_out_names = {

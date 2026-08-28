@@ -168,7 +168,36 @@ Use this when your PC **cannot download Hugging Face models** and you must use a
 | **Gemini** | Upload file to API | Upload when supported | No local models |
 | **OpenAI-compatible** | Text extract via PyMuPDF, or vision for images | Text extract only | Needs base URL |
 
-No Hugging Face, no `huggingface-cli`, no local LLM weights — only HTTP calls (`google-genai` or `requests`).
+No Hugging Face, no `huggingface-cli`, no local LLM weights — only HTTP calls via your configured API endpoint.
+
+## Local Docling OCR (`model/` — no Hugging Face download for OCR)
+
+Corporate PCs often block Hugging Face downloads (e.g. `PP-OCRv6_rec_small`). This repo ships **local RapidOCR ONNX weights** for Docling OCR:
+
+| File in `model/` | Role |
+|------------------|------|
+| `PP-OCRv6_det_small.onnx` | Text detection |
+| `PP-OCRv6_rec_small.onnx` | Text recognition |
+| `ch_ppocr_mobile_v2.0_cls_mobile.onnx` | Line orientation |
+| `ppocrv6_dict.txt` | Recognition charset |
+
+**Setup (if `model/` is empty on a new clone):**
+
+```powershell
+python copy_local_ocr_models.py
+```
+
+Copies from the installed `rapidocr` package (e.g. `site-packages/rapidocr/models/`) into `./model/`.
+
+**In the app sidebar:**
+
+1. **Use local OCR models (model/ folder)** — Docling reads the ONNX files above
+2. **Enable OCR**
+3. Optional: **Restricted PC** — blocks Docling from downloading OCR weights from Hugging Face (local `model/` still works)
+
+LiteParse OCR is separate and still follows **Enable OCR** only.
+
+**Note:** Layout/table Docling models (`docling-layout-heron`, `TableFormerV2`) may still download from Hugging Face on first run unless already cached. Local `model/` covers **OCR only**.
 
 ## Hybrid (PDF)
 
@@ -183,7 +212,14 @@ No Hugging Face, no `huggingface-cli`, no local LLM weights — only HTTP calls 
 .
 ├── Home.py                          # Intro / how-to / references
 ├── docling_utils.py                 # Shared parsers (all methods)
-├── llm_api_utils.py                 # Cloud LLM API parsing (Gemini / OpenAI-compatible)
+├── llm_api_utils.py                 # Cloud LLM API parsing (user-defined endpoint)
+├── copy_local_ocr_models.py         # Copy RapidOCR ONNX into model/
+├── model/                           # Local Docling OCR weights (PP-OCRv6 det/rec, cls, dict)
+│   ├── README.md
+│   ├── PP-OCRv6_det_small.onnx
+│   ├── PP-OCRv6_rec_small.onnx
+│   ├── ch_ppocr_mobile_v2.0_cls_mobile.onnx
+│   └── ppocrv6_dict.txt
 ├── pages/
 │   ├── 1_Single_Document_Parsing.py
 │   └── 2_Bulk_Parsing.py
@@ -236,6 +272,7 @@ Windows setup scripts run this OpenCV headless swap automatically after `pip ins
 | `streamlit` / wrong Python | Use `python -m streamlit run Home.py` or `run.bat` |
 | Cannot create `.venv` | Use `setup_no_venv.bat` or `pip install --user -r requirements.txt` |
 | `libGL.so.1` / Docling on Linux | Run `python fix_opencv_headless.py` or install `libgl1` (see section above) |
+| RapidOCR / PP-OCR HF download blocked | Enable **Use local OCR models**; run `python copy_local_ocr_models.py` |
 | LLM API empty / auth error | Check API key, model name, and base URL; confirm outbound HTTPS is allowed |
 | LiteParse fails on PPTX/XLSX/CSV | Install LibreOffice, or use Docling / LLM API (Gemini) |
 | Slow first run | Normal — models downloading |
