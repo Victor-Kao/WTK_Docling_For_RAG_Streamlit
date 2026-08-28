@@ -8,6 +8,7 @@ Streamlit app that converts documents to **Markdown** or **JSON** for RAG and ot
 - [LiteParse](https://github.com/run-llama/liteparse)
 - [PyMuPDF](https://github.com/pymupdf/PyMuPDF)
 - **Hybrid** (PDF only) — fast parser by default; **Docling** only on pages that contain tables
+- **LLM API** — cloud Gemini or OpenAI-compatible gateway (no local models / no Hugging Face)
 
 Supports **single-file** parsing and **bulk** multi-file parsing with live status, result preview, and selective ZIP download.
 
@@ -148,8 +149,26 @@ Use `python -m streamlit` so you do not launch the wrong Python/Streamlit from `
 | **LiteParse** | PDF and images natively; DOCX/PPTX/XLSX/CSV only with LibreOffice |
 | **PyMuPDF** | PDF, common images |
 | **Hybrid** | PDF only — LiteParse/PyMuPDF by default; Docling on pages with tables |
+| **LLM API** | All supported types via cloud API (Gemini upload or text/vision) |
 
-Legacy Office (`.doc`, `.ppt`, `.xls`) and LiteParse Office conversion need LibreOffice. Without it, use **Docling** for Office/CSV.
+Legacy Office (`.doc`, `.ppt`, `.xls`) and LiteParse Office conversion need LibreOffice. Without it, use **Docling** or **LLM API (Gemini)** for Office/CSV.
+
+## LLM API (company gateway / no Hugging Face)
+
+Use this when your PC **cannot download Hugging Face models** and you must use a **company-approved API** only.
+
+1. In the sidebar, choose parsing method **LLM API**.
+2. Pick **Gemini** (Google AI / company Gemini endpoint) or **OpenAI-compatible** (many internal gateways).
+3. Paste your **API key** (stored in the browser session only — not saved to git).
+4. Set **model** (e.g. `gemini-2.0-flash`, `gpt-4o`).
+5. For OpenAI-compatible, set **API base URL** (e.g. `https://gateway.company.com/v1`).
+
+| Provider | PDF / images | Office files | Notes |
+|----------|--------------|--------------|-------|
+| **Gemini** | Upload file to API | Upload when supported | No local models |
+| **OpenAI-compatible** | Text extract via PyMuPDF, or vision for images | Text extract only | Needs base URL |
+
+No Hugging Face, no `huggingface-cli`, no local LLM weights — only HTTP calls (`google-genai` or `requests`).
 
 ## Hybrid (PDF)
 
@@ -164,6 +183,7 @@ Legacy Office (`.doc`, `.ppt`, `.xls`) and LiteParse Office conversion need Libr
 .
 ├── Home.py                          # Intro / how-to / references
 ├── docling_utils.py                 # Shared parsers (all methods)
+├── llm_api_utils.py                 # Cloud LLM API parsing (Gemini / OpenAI-compatible)
 ├── pages/
 │   ├── 1_Single_Document_Parsing.py
 │   └── 2_Bulk_Parsing.py
@@ -216,7 +236,8 @@ Windows setup scripts run this OpenCV headless swap automatically after `pip ins
 | `streamlit` / wrong Python | Use `python -m streamlit run Home.py` or `run.bat` |
 | Cannot create `.venv` | Use `setup_no_venv.bat` or `pip install --user -r requirements.txt` |
 | `libGL.so.1` / Docling on Linux | Run `python fix_opencv_headless.py` or install `libgl1` (see section above) |
-| LiteParse fails on PPTX/XLSX/CSV | Install LibreOffice, or use Docling |
+| LLM API empty / auth error | Check API key, model name, and base URL; confirm outbound HTTPS is allowed |
+| LiteParse fails on PPTX/XLSX/CSV | Install LibreOffice, or use Docling / LLM API (Gemini) |
 | Slow first run | Normal — models downloading |
 | Out of memory on large PDFs | Use PyMuPDF / Hybrid, or split the file |
 | `pip` / install blocked by IT | Ask for Anaconda or package allow-list (see requirements.txt) |

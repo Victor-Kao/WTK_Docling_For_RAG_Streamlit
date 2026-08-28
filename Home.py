@@ -13,7 +13,8 @@ st.set_page_config(
 
 st.title("Documents Parsing Tool")
 st.caption(
-    "Parse documents into Markdown / JSON with Docling, PDFplumber, LiteParse, PyMuPDF, or Hybrid."
+    "Parse documents into Markdown / JSON with Docling, PDFplumber, LiteParse, "
+    "PyMuPDF, Hybrid, or LLM API (cloud only)."
 )
 
 st.markdown("---")
@@ -34,6 +35,8 @@ single-file or bulk folder workflows.
 - **[PyMuPDF](https://github.com/pymupdf/PyMuPDF)** — high-performance PDF/image text extraction.
 - **Hybrid** — PDF only: fast default parser (LiteParse / PyMuPDF), **Docling** only on pages
   that contain tables, then switch back.
+- **LLM API** — cloud-only parsing via your company **Gemini** or **OpenAI-compatible** API.
+  No Hugging Face downloads and no local LLM models.
 """
 )
 
@@ -77,15 +80,17 @@ st.markdown(
     """
 **Single file**
 1. Open **Single Document Parsing** in the sidebar.
-2. In **Settings**, choose a **Parsing method** (Docling, PDFplumber, LiteParse, PyMuPDF, or Hybrid).
-3. Upload one supported file (format limits depend on the method).
-4. Optionally enable **OCR** (Docling / LiteParse / Hybrid), choose **Markdown** or **JSON**, then click **Convert**.
-5. Preview and download the result (use **Show / Hide result** as needed).
+2. In **Settings**, choose a **Parsing method** (Docling, PDFplumber, LiteParse, PyMuPDF, Hybrid, or LLM API).
+3. For **LLM API**, enter your company API key and model in the sidebar (session only).
+4. Upload one supported file (format limits depend on the method).
+5. Optionally enable **OCR** (Docling / LiteParse / Hybrid), choose **Markdown** or **JSON**, then click **Convert**.
+6. Preview and download the result (use **Show / Hide result** as needed).
 
 **Bulk folder**
 1. Open **Bulk Parsing** in the sidebar.
 2. Upload multiple files (select all files from a folder if needed); set a **Default method for Document** (or **Auto Selection**) if you like.
-3. In the file table, choose **Method** per file (Docling / PDFplumber / LiteParse / PyMuPDF / Hybrid where supported).
+3. In the file table, choose **Method** per file (Docling / PDFplumber / LiteParse / PyMuPDF / Hybrid / LLM API where supported).
+4. If any row uses **LLM API**, fill in the **LLM API** sidebar section (API key, model).
 4. Click **Start convert** and watch the live dashboard (Done / In progress / Pending / Failed).
 5. Preview one converted file at a time, uncheck any files to exclude from the ZIP, then download.
 

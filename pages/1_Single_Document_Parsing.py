@@ -10,6 +10,7 @@ import streamlit as st
 
 from docling_utils import (
     METHOD_HYBRID,
+    METHOD_LLM_API,
     METHOD_LITEPARSE,
     METHOD_PDFPLUMBER,
     METHOD_PYMUPDF,
@@ -33,8 +34,9 @@ st.markdown(
     "[Docling](https://github.com/docling-project/docling), "
     "[PDFplumber](https://github.com/jsvine/pdfplumber), "
     "[LiteParse](https://github.com/run-llama/liteparse), "
-    "[PyMuPDF](https://github.com/pymupdf/PyMuPDF), or "
-    "**Hybrid** (PDF: fast parser + Docling on table pages)."
+    "[PyMuPDF](https://github.com/pymupdf/PyMuPDF), "
+    "**Hybrid** (PDF: fast parser + Docling on table pages), or "
+    "**LLM API** (company Gemini / OpenAI-compatible gateway — no local models)."
 )
 
 if "conversion" not in st.session_state:
@@ -48,6 +50,7 @@ with st.sidebar:
 method = settings["method"]
 enable_ocr = settings["enable_ocr"]
 output_format = settings["output_format"]
+llm_config = settings.get("llm_config")
 allowed_types = allowed_extensions_for_method(method)
 
 uploaded = st.file_uploader(
@@ -63,7 +66,11 @@ uploaded = st.file_uploader(
                 "PDF and images when LiteParse is selected "
                 "(Office/CSV need LibreOffice)."
                 if method == METHOD_LITEPARSE
-                else "Select one document to convert."
+                else (
+                    "Cloud API parsing when LLM API is selected (API key required)."
+                    if method == METHOD_LLM_API
+                    else "Select one document to convert."
+                )
             )
         )
     ),
@@ -114,6 +121,7 @@ if uploaded is not None:
                     method=method,
                     enable_ocr=enable_ocr,
                     output_format=output_format,
+                    llm_config=llm_config,
                 )
                 st.session_state.conversion = {
                     "source_name": uploaded.name,

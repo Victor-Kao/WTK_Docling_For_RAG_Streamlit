@@ -21,11 +21,14 @@ from docling.document_converter import (
 )
 from liteparse import LiteParse
 
+from llm_api_utils import LlmApiConfig, parse_with_llm_api
+
 METHOD_DOCLING = "Docling"
 METHOD_PDFPLUMBER = "PDFplumber"
 METHOD_LITEPARSE = "LiteParse"
 METHOD_PYMUPDF = "PyMuPDF"
 METHOD_HYBRID = "Hybrid"
+METHOD_LLM_API = "LLM API"
 METHOD_AUTO = "Auto Selection"
 PARSING_METHODS = [
     METHOD_DOCLING,
@@ -33,6 +36,7 @@ PARSING_METHODS = [
     METHOD_LITEPARSE,
     METHOD_PYMUPDF,
     METHOD_HYBRID,
+    METHOD_LLM_API,
 ]
 DEFAULT_DOCUMENT_METHODS = [METHOD_AUTO, *PARSING_METHODS]
 # Large PDFs default to PyMuPDF (as Hybrid base) under Auto Selection.
@@ -164,6 +168,8 @@ def is_supported_file(name: str, method: str = METHOD_DOCLING) -> bool:
         return ext in PYMUPDF_EXTENSIONS_SET
     if method == METHOD_HYBRID:
         return ext in HYBRID_EXTENSIONS_SET
+    if method == METHOD_LLM_API:
+        return ext in SUPPORTED_EXTENSIONS_SET
     return ext in SUPPORTED_EXTENSIONS_SET
 
 
@@ -181,6 +187,8 @@ def methods_for_file(name: str) -> list[str]:
         methods.append(METHOD_PYMUPDF)
     if ext in HYBRID_EXTENSIONS_SET:
         methods.append(METHOD_HYBRID)
+    if ext in SUPPORTED_EXTENSIONS_SET:
+        methods.append(METHOD_LLM_API)
     return methods or [METHOD_DOCLING]
 
 
@@ -239,6 +247,8 @@ def allowed_extensions_for_method(method: str) -> list[str]:
         return PYMUPDF_EXTENSIONS
     if method == METHOD_HYBRID:
         return HYBRID_EXTENSIONS
+    if method == METHOD_LLM_API:
+        return SUPPORTED_EXTENSIONS
     return SUPPORTED_EXTENSIONS
 
 
@@ -609,6 +619,7 @@ def parse_bytes(
     method: str,
     enable_ocr: bool,
     output_format: str,
+    llm_config: LlmApiConfig | None = None,
 ) -> tuple[str, str, str]:
     """Parse file bytes with the selected method and return export triple."""
     if method == METHOD_PDFPLUMBER:
@@ -629,6 +640,15 @@ def parse_bytes(
             enable_ocr=enable_ocr,
             output_format=output_format,
         )
+    if method == METHOD_LLM_API:
+        if llm_config is None:
+            raise ValueError("LLM API settings are missing. Enter your API key in Settings.")
+        return parse_with_llm_api(
+            name,
+            raw,
+            config=llm_config,
+            output_format=output_format,
+        )
     if method != METHOD_DOCLING:
         raise ValueError(f"Unknown parsing method: {method}")
     result = _convert_with_docling(name, raw, enable_ocr)
@@ -641,6 +661,7 @@ def parse_upload(
     method: str,
     enable_ocr: bool,
     output_format: str,
+    llm_config: LlmApiConfig | None = None,
 ) -> tuple[str, str, str]:
     """Parse an uploaded Streamlit file with the selected method."""
     return parse_bytes(
@@ -649,6 +670,7 @@ def parse_upload(
         method=method,
         enable_ocr=enable_ocr,
         output_format=output_format,
+        llm_config=llm_config,
     )
 
 
@@ -682,9 +704,15 @@ def render_parse_settings(*, key_prefix: str = "") -> dict[str, Any]:
         help=(
             "Docling / LiteParse: multi-format. "
             "PDFplumber / PyMuPDF: PDF-focused. "
-            "Hybrid (PDF): default parser, Docling only on pages with tables."
+            "Hybrid (PDF): default parser, Docling only on pages with tables. "
+            "LLM API: cloud-only (Gemini or company OpenAI-compatible gateway)."
         ),
     )
+    llm_config: LlmApiConfig | None = None
+    if method == METHOD_LLM_API:
+        from llm_api_utils import render_llm_api_settings
+
+        llm_config = render_llm_api_settings(key_prefix=key_prefix)
     ocr_methods = {METHOD_DOCLING, METHOD_LITEPARSE, METHOD_HYBRID}
     enable_ocr = st.checkbox(
         "Enable OCR",
@@ -724,13 +752,21 @@ def render_parse_settings(*, key_prefix: str = "") -> dict[str, Any]:
             "**Hybrid (PDF only):** parse with LiteParse / PyMuPDF by default; "
             "pages with detected tables use **Docling**, then continue with the fast parser."
         )
+    elif method == METHOD_LLM_API:
+        st.caption(
+            "**LLM API:** sends the file to your cloud API (no Hugging Face / no local models). "
+            "Best for company Gemini or OpenAI-compatible gateways."
+        )
     else:
         st.caption(
             "Docling: PDF, PPT/PPTX, DOC/DOCX, XLS/XLSX, CSV, TXT, JSON, MD, HTML, images."
         )
     st.markdown("---")
-    return {
+    result: dict[str, Any] = {
         "method": method,
         "enable_ocr": enable_ocr,
         "output_format": output_format,
     }
+    if llm_config is not None:
+        result["llm_config"] = llm_config
+    return result

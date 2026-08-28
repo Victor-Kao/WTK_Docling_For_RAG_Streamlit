@@ -17,6 +17,7 @@ from docling_utils import (
     DEFAULT_DOCUMENT_METHODS,
     METHOD_AUTO,
     METHOD_DOCLING,
+    METHOD_LLM_API,
     PARSING_METHODS,
     SUPPORTED_EXTENSIONS,
     coerce_method_for_file,
@@ -25,6 +26,7 @@ from docling_utils import (
     output_name_for_source,
     parse_bytes,
 )
+from llm_api_utils import render_llm_api_settings
 
 st.set_page_config(
     page_title="Bulk Parsing | Documents Parsing Tool",
@@ -268,7 +270,7 @@ _init_state()
 st.title("Bulk Parsing")
 st.markdown(
     "Upload multiple files (or all files from a folder), choose a parsing method **per file** "
-    "(Docling, PDFplumber, LiteParse, PyMuPDF, or Hybrid), "
+    "(Docling, PDFplumber, LiteParse, PyMuPDF, Hybrid, or LLM API), "
     "watch live status, and download a ZIP of successful outputs."
 )
 
@@ -308,6 +310,9 @@ with st.sidebar:
         index=0,
         key="bulk_output_format",
     )
+    st.markdown("---")
+    st.subheader("LLM API (optional)")
+    bulk_llm_config = render_llm_api_settings(key_prefix="bulk_")
     st.markdown("---")
     st.caption(
         "Multi-file upload keeps relative paths when the browser provides them. "
@@ -487,6 +492,7 @@ if start and not st.session_state.bulk_running:
                 method=file_method,
                 enable_ocr=enable_ocr,
                 output_format=output_format,
+                llm_config=bulk_llm_config if file_method == METHOD_LLM_API else None,
             )
             out_name = output_name_for_source(source_name, output_format)
             existing_out_names = {
