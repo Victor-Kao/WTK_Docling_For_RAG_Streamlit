@@ -65,14 +65,13 @@ temp/
 *.zip
 !requirements.txt
 
-# Model weights — ONNX in model/ is tracked for offline Docling OCR
-# (PP-OCRv6_det_small.onnx, PP-OCRv6_rec_small.onnx, etc.)
+# Model weights — ONNX files stay local (run copy_local_ocr_models.py)
 .cache/
 huggingface/
 *.ckpt
 *.pt
 *.bin
-# *.onnx  — commented out so model/*.onnx can be committed (~30 MB total)
+*.onnx
 
 # Jupyter
 .ipynb_checkpoints/

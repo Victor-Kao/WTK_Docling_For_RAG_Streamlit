@@ -172,7 +172,7 @@ No Hugging Face, no `huggingface-cli`, no local LLM weights — only HTTP calls 
 
 ## Local Docling OCR (`model/` — no Hugging Face download for OCR)
 
-Corporate PCs often block Hugging Face downloads (e.g. `PP-OCRv6_rec_small`). This repo ships **local RapidOCR ONNX weights** for Docling OCR:
+Corporate PCs often block Hugging Face downloads (e.g. `PP-OCRv6_rec_small`). Place **local RapidOCR ONNX weights** in `model/` for Docling OCR (not stored in git — ~30 MB):
 
 | File in `model/` | Role |
 |------------------|------|
@@ -214,12 +214,7 @@ LiteParse OCR is separate and still follows **Enable OCR** only.
 ├── docling_utils.py                 # Shared parsers (all methods)
 ├── llm_api_utils.py                 # Cloud LLM API parsing (user-defined endpoint)
 ├── copy_local_ocr_models.py         # Copy RapidOCR ONNX into model/
-├── model/                           # Local Docling OCR weights (PP-OCRv6 det/rec, cls, dict)
-│   ├── README.md
-│   ├── PP-OCRv6_det_small.onnx
-│   ├── PP-OCRv6_rec_small.onnx
-│   ├── ch_ppocr_mobile_v2.0_cls_mobile.onnx
-│   └── ppocrv6_dict.txt
+├── model/                           # Local Docling OCR weights (not in git; see model/README.md)
 ├── pages/
 │   ├── 1_Single_Document_Parsing.py
 │   └── 2_Bulk_Parsing.py
